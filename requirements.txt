@@ -8,3 +8,5 @@ seaborn
 joblib
 groq
 python-dotenv
+openai
+plotly
