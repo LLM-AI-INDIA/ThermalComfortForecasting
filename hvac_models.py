@@ -1,16 +1,9 @@
-
-import os
-import json
-import joblib
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.ensemble import GradientBoostingRegressor
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
@@ -35,15 +28,10 @@ FEATURES = [
 ]
 TARGET      = 'PMV'
 WINDOW      = 12      # 12 steps × 5 min = 1 hour lookback
-HORIZON     = 1       # predict 1 step = 5 min ahead
 TRAIN_RATIO = 1.0     # 100% train (user provides manual split)
 EPOCHS      = 100     # max epochs (early stopping will cut this short)
 BATCH_SIZE  = 16
 PATIENCE    = 15      # early stopping patience
-
-# ── OUTPUT PATHS ─────────────────────────────────────────────────
-SAVE_DIR = 'saved_models'
-os.makedirs(SAVE_DIR, exist_ok=True)
 
 # THERMAL COMFORT LOGIC (ISO 7730 / Fanger PMV)
 
@@ -70,17 +58,6 @@ def calculate_fanger_pmv(ta, tr, vel, rh, met=1.2, clo=0.6):
     pmv = ts * (m - hl1 - hl2 - hl3 - hl4 - hl5 - hl6)
     return float(pmv)
 
-def estimate_pmv_from_sensors(row):
-    """Maps sensor reading row to physical values and computes PMV."""
-    ta = row.get('Offcoil_Temperature', 22.0)
-    rh = row.get('Return_air_RH', 50.0)
-    flow = row.get('Flowrate', 0.9)
-    vel = max(0.05, min(0.5, flow / 5.0))
-    cp = row.get('Cooling_Power', 35000.0)
-    tr = ta - (cp / 15000) + 1.0 
-    co2 = row.get('Return_air_Co2', 450.0)
-    met = 1.0 + (max(0, co2 - 400) / 1000) 
-    return calculate_fanger_pmv(ta, tr, vel, rh, met=met)
 
 
 def get_comfort_descriptor(pmv):
@@ -176,16 +153,21 @@ def prepare_hvac_data(df, train_ratio=TRAIN_RATIO):
 
 
 def evaluate_model(y_true_raw, preds_scaled, pmv_scaler):
-    """Inverse-scale predictions and compute MAE, RMSE, R²."""
+    """Inverse-scale predictions and compute MAE, RMSE, R², Bias, MAPE."""
     if len(y_true_raw) == 0:
-        return np.array([]), 0.0, 0.0, 0.0
+        return np.array([]), 0.0, 0.0, 0.0, 0.0, 0.0
         
     preds_raw = pmv_scaler.inverse_transform(
         preds_scaled.reshape(-1,1)).ravel()
     mae  = mean_absolute_error(y_true_raw, preds_raw)
     rmse = np.sqrt(mean_squared_error(y_true_raw, preds_raw))
     r2   = r2_score(y_true_raw, preds_raw)
-    return preds_raw, mae, rmse, r2
+    
+    # New metrics
+    bias = np.sum(y_true_raw - preds_raw)
+    mape = np.mean(np.abs((y_true_raw - preds_raw) / (np.abs(y_true_raw) + 1e-10))) * 100
+    
+    return preds_raw, mae, rmse, r2, bias, mape
 
 
 def check_physics_violations(X_test_raw, preds_raw, cooling_idx=0):
@@ -313,39 +295,3 @@ def predict_lstm(model, X_window, feat_scaler, pmv_scaler, last_12_raw, new_inpu
 
 
 
-# SAVE/LOAD UTILITIES
-
-
-def save_model_bundle(model, feat_scaler, pmv_scaler, model_type="LSTM", save_dir=SAVE_DIR):
-    """Save model and scalers to disk."""
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-        
-    scaler_path = os.path.join(save_dir, f"{model_type}_scalers.pkl")
-    joblib.dump({"feat": feat_scaler, "pmv": pmv_scaler}, scaler_path)
-    
-    if hasattr(model, "save"):
-        model_path = os.path.join(save_dir, f"{model_type}_model.keras")
-        model.save(model_path)
-    
-    return True
-
-
-def load_model_bundle(model_type="LSTM", save_dir=SAVE_DIR):
-    """Load model and scalers from disk."""
-    scaler_path = os.path.join(save_dir, f"{model_type}_scalers.pkl")
-    if not os.path.exists(scaler_path):
-        return None, None
-    
-    scalers = joblib.load(scaler_path)
-    model_path = os.path.join(save_dir, f"{model_type}_model.keras")
-    
-    if os.path.exists(model_path):
-        try:
-            model = tf.keras.models.load_model(model_path)
-            return model, scalers
-        except Exception as e:
-            print(f"Loading error: {e}")
-            return None, scalers
-    
-    return None, scalers
