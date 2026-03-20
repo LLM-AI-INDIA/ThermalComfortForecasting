@@ -27,36 +27,22 @@ def load_dataframe(file_bytes, file_extension):
         return pd.read_excel(io.BytesIO(file_bytes))
     return None
 
-def stream_text_animation(text, delay=0.005, is_code=False, language="python"):
-    """Simulates a creative typewriter/streaming effect for text or code. Reduced delay for faster output."""
+def stream_text_animation(text, delay=0.01, is_code=False, language="python"):
+    """Simulates a creative typewriter/streaming effect for text or code."""
     placeholder = st.empty()
-    
-    if delay <= 0:
-        if is_code:
-            placeholder.code(text, language=language)
-        else:
-            placeholder.markdown(text)
-        return text
-
     full_text = ""
-    # For very long strings, step through words instead of characters to speed up
-    if len(text) > 300:
-        words = text.split(' ')
-        for word in words:
-            full_text += word + ' '
-            if is_code:
-                placeholder.code(full_text, language=language)
-            else:
-                placeholder.markdown(full_text)
-            time.sleep(delay * 3) # Slightly longer delay per word but much faster overall
-    else:
-        for char in text:
-            full_text += char
-            if is_code:
-                placeholder.code(full_text, language=language)
-            else:
-                placeholder.markdown(full_text)
-            time.sleep(delay)
+    
+    # Adding a glowing container for the stream
+    prefix = '<div class="streaming-container">'
+    suffix = '</div>'
+    
+    for char in text:
+        full_text += char
+        if is_code:
+            placeholder.code(full_text, language=language)
+        else:
+            placeholder.markdown(full_text)
+        time.sleep(delay)
     return full_text
 
 def get_ai_insights(df, latest_reading, model_id="claude-sonnet-4-5"):
@@ -445,7 +431,10 @@ def display_chatbot():
                         claude_messages.append({"role": msg["role"], "content": msg["content"]})
                         
                     # Specific Claude implementation using Sonnet 4.5/4.6 with Agentic Plan animation
-                    with st.status("🤖 Agentic Forecast is planning...", expanded=False) as status:
+                    with st.status("🤖 Agentic Forecast is planning...", expanded=True) as status:
+                        st.markdown('<div class="thinking-status">📝 Constructing expert prompt... <div class="dot-flashing"></div></div>', unsafe_allow_html=True)
+                        stream_text_animation("", delay=0.01)
+                        
                         plan_code = f"""
 # AGENTIC EXECUTION PLAN
 1. DATA_SPLIT: Dividing data into 70% Train ({int(row_count*0.7) if has_df else 0}) and 30% Test ({row_count - int(row_count*0.7) if has_df else 0})
@@ -455,8 +444,14 @@ def display_chatbot():
 5. TOOLS: Code Execution enabled (version: 20250825)
 6. FORMAT_OUTPUT: Generating actionable building insights
                         """
-                        st.code(plan_code, language="markdown")
-                        status.update(label="✅ Planning complete. Calling AI...", state="complete")
+                        stream_text_animation(plan_code, delay=0.005, is_code=True, language="markdown")
+                        
+                        if has_df:
+                            st.markdown('<div class="thinking-status">🔍 Scanning sensor trends... <div class="dot-flashing"></div></div>', unsafe_allow_html=True)
+                            stream_text_animation("", delay=0.01)
+                        
+                        st.markdown('<div class="thinking-status">🚀 Executing inference... <div class="dot-flashing"></div></div>', unsafe_allow_html=True)
+                        stream_text_animation("", delay=0.01)
                         
                         message = claude_client.messages.create(
                             model=model_id,
