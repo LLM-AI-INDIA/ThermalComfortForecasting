@@ -294,10 +294,10 @@ with st.sidebar:
         </div>
         <div style="display:flex;justify-content:space-between;
                     align-items:center;gap:10px;padding:0 10px;">
-            <img src="{get_image_as_base64('C:/Users/yokes/Downloads/oie_png.png')}"
+            <img src="{get_image_as_base64('LOGO/oie_png.png')}"
                  style="width:45%;height:80px;background:white;
                         border-radius:4px;padding:2px;">
-            <img src="{get_image_as_base64('C:/Users/yokes/Downloads/image.png')}"
+            <img src="{get_image_as_base64('LOGO/image.png')}"
                  style="width:45%;height:80px;background:white;
                         border-radius:4px;padding:2px;">
         </div>
@@ -313,23 +313,18 @@ main_func = st.session_state.last_main_func
 
 # ── MAIN NAVIGATION ROUTING ──────────────────────────────────────
 # ── LOGO & HEADER ────────────────────────────────────────────────
-logo_src = get_image_as_base64("C:/Users/yokes/Downloads/image.png")
-col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+logo_src = get_image_as_base64("LOGO/image.png")
+col_l1, col_l2, col_l3 = st.columns([0.1, 3.8, 0.1])
 with col_l2:
     st.markdown(f"""
-        <div style="display:flex;flex-direction:column;align-items:center;
-                    width:100%;margin-top:-50px;">
-            <img src="{logo_src}" style="width:100px;">
-            <div style="text-align:center;color:#1A237E;font-size:1.5rem;
-                        font-weight:500;margin-top:-10px;
-                        text-shadow:1px 1px 2px rgba(0,0,0,0.1);">
+        <div class="main-header">
+            <img src="{logo_src}" class="header-logo">
+            <div class="header-title">
                Thermal Comfort Forecasting AI Model
             </div>
-            <div style="width:800px;height:3px;
-                        background:linear-gradient(90deg,transparent,#1A73E8,transparent);
-                        margin-top:5px;"></div>
+            <div class="header-line"></div>
         </div>
-        <div style="margin-bottom:15px;"></div>
+        <div class="header-spacer"></div>
     """, unsafe_allow_html=True)
 
 # Chatbot moved inside Dashboard -> Model Selection -> Agentic Forecast
@@ -382,6 +377,7 @@ else: # nav_choice == "Home"
 
         if main_func == "Thermal Comfort Forecasting":
             # ── FILE UPLOADER ─────────────────────────────────────────────────
+            st.markdown('<div class="dashboard-spacer"></div>', unsafe_allow_html=True)
             uploaded_file = None
             # Refactored to horizontal layout
             up_col1, up_col2 = st.columns([1, 2])
@@ -448,7 +444,7 @@ else: # nav_choice == "Home"
                         f"{df.shape[1]} columns")
 
         # ── DATA EDA ──────────────────────────────────────────────
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom:30px;'></div>", unsafe_allow_html=True)
         eda_col1, eda_col2 = st.columns([2, 1])
         with eda_col1:
             st.markdown(
@@ -472,7 +468,7 @@ else: # nav_choice == "Home"
                 perform_hvac_eda(df)
 
             # ── PREPROCESSING ─────────────────────────────────────────
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-bottom:30px;'></div>", unsafe_allow_html=True)
             pp_col1, pp_col2 = st.columns([2, 1])
             with pp_col1:
                 st.markdown("<h3 style='margin-top:0px;'>⚙️ Data Preprocessing</h3>", unsafe_allow_html=True)
@@ -522,8 +518,8 @@ else: # nav_choice == "Home"
                         st.success("**✅ Dataset validated. Ready for modelling.**")
                 
             # ── AI INSIGHTS ───────────────────────────────────────────
+            st.markdown("<div style='margin-bottom:30px;'></div>", unsafe_allow_html=True)
             if st.session_state.data_preprocessed:
-                st.markdown("<br>", unsafe_allow_html=True)
                 ai_col1, ai_col2 = st.columns([2, 1])
                 with ai_col1:
                     st.markdown("<h3 style='margin-top:0px;'>🤖 AI Data-Driven Insights</h3>", unsafe_allow_html=True)
@@ -584,6 +580,7 @@ else: # nav_choice == "Home"
             # ── HVAC MODELLING AREA ───────────────────────────────────
             if st.session_state.get("insights_generated"):
                 st.markdown("---")
+                st.markdown('<div class="dashboard-spacer"></div>', unsafe_allow_html=True)
                 st.markdown("<h4>🔬 HVAC Thermal Comfort Modelling</h4>", unsafe_allow_html=True)
 
                 # Model Selection - Two-column layout: Label on left, Box on right
@@ -599,6 +596,7 @@ else: # nav_choice == "Home"
                         label = "Select Model",
                         options = ["Select Model", "LSTM", "PCEL", "PCDL", "Agentic Forecast"],
                         label_visibility = "collapsed",
+                        key = "hvac_model_choice_select"
                     )
 
                 if hvac_model_choice == "Agentic Forecast":
@@ -607,6 +605,7 @@ else: # nav_choice == "Home"
                     ag.display_chatbot()
 
                 if hvac_model_choice in ["LSTM", "PCDL"]:
+                    st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
                     tr_col1, tr_col2 = st.columns([1, 2])
                     with tr_col1:
                         st.markdown(
@@ -650,12 +649,12 @@ else: # nav_choice == "Home"
                                 st.session_state.last_12_raw = X_raw[-WINDOW:] if len(X_raw) >= WINDOW else X_raw
                                 
                                 if result.get('has_test_results'):
-                                    st.success(f"✅ {st.session_state.hvac_type} model trained and evaluated successfully!")
+                                    st.success(f"✅ {st.session_state.hvac_type} model trained successfully!")
                                 else:
                                     st.success(f"✅ {st.session_state.hvac_type} model trained successfully! (Evaluation held for Test Section)")
 
             # ── TEST DATA EVALUATION ─────────────────────────────────────
-            if st.session_state.get("model_trained", False):
+            if st.session_state.get("model_trained", False) and hvac_model_choice != "Agentic Forecast":
                 st.markdown("---")
                 st.markdown("<h4>📉 Verify Model with Test Data</h4>", unsafe_allow_html=True)
                 

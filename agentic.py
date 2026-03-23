@@ -292,7 +292,10 @@ def display_chatbot():
 
     # Initialize messages if empty (Greeting)
     if not st.session_state.messages:
-        initial_msg = "Hello! I'm your **Agentic Forecast Assistant**. Please use the **Data Manager** above to upload your file, and I'll be ready to help!"
+        if st.session_state.get("main_df") is not None:
+            initial_msg = f"Hello! I'm your **Agentic Forecast Assistant**. I've successfully synced with your uploaded training data (`{st.session_state.main_df_name}`). I'm ready to analyze it or answer any questions!"
+        else:
+            initial_msg = "Hello! I'm your **Agentic Forecast Assistant**. Please use the **Data Manager** above to upload your file, and I'll be ready to help!"
         st.session_state.messages.append({"role": "assistant", "content": initial_msg})
 
     # Display chat messages
